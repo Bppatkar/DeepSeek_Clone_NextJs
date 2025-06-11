@@ -1,0 +1,16 @@
+{
+  "name": "deepseek_clone_nextjs",
+  "version": "1.0.0",
+  "description": "It is DeepSeek AI Webpage clone where we can ask questoins from DeepSeek",
+  "main": "index.js",
+  "scripts": {
+    "test": "start : \"node index.js\""
+  },
+  "keywords": [
+    "MERN",
+    "NEXT_JS",
+    "REACT_JS"
+  ],
+  "author": "BHANU PRATAP PATKAR",
+  "license": "ISC"
+}
