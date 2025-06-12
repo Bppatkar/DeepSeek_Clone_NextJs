@@ -1,5 +1,6 @@
 "use client";
 import { assets } from "@/assets/assets";
+import Message from "@/components/Message";
 import PromptBox from "@/components/PromptBox";
 import Sidebar from "@/components/Sidebar";
 import Image from "next/image";
@@ -12,7 +13,7 @@ export default function Home() {
   return (
     <div>
       <div className="flex h-screen">
-        <Sidebar expand={expand} setExpand={setExpand}/>
+        <Sidebar expand={expand} setExpand={setExpand} />
         <div className="flex-1 flex flex-col items-center justify-center px-4 pb-8 bg-[#292a2d] text-white relative">
           <div className="md:hidden absolute px-4 top-6 flex items-center justify-between w-full">
             <Image
@@ -33,10 +34,12 @@ export default function Home() {
               <p className="text-sm mt-2">How i can help you today?</p>
             </>
           ) : (
-            <div></div>
+            <div>
+              <Message role="user" content="What is Next Js" />
+            </div>
           )}
           {/* prompt box */}
-          <PromptBox isLoading={isLoading} setIsLoading = {setIsLoading} />
+          <PromptBox isLoading={isLoading} setIsLoading={setIsLoading} />
           <p className="text-sm absolute bottom-1 text-gray-500">
             AI Generated , for reference only
           </p>
