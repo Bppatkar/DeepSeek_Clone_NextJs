@@ -2,9 +2,9 @@ import { Webhook } from "svix";
 import connectDB from "@/config/db";
 import User from "@/models/User";
 import { headers } from "next/headers";
-import { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 
-export async function POST(req, res) {
+export async function POST(req) {
   const wh = new Webhook(process.env.SIGNING_SECRET);
   const headerPayload = await headers();
   const svixHeaders = {
@@ -35,16 +35,21 @@ export async function POST(req, res) {
   switch (type) {
     case "user.created":
       await User.create(userData);
+      console.log("User created:", userData);
       break;
     case "user.updated":
       await User.findByIdAndUpdate(data.id, userData);
+      console.log("User updated:", userData);
       break;
     case "user.deleted":
       await User.findByIdAndDelete(data.id);
+      console.log("User deleted:", data.id);
       break;
 
     default:
+      console.log("Unhandled event type:", type);
       break;
   }
-  return NextRequest.json({ message: "Event received" });
+  return NextResponse.json({ message: "Event received" });
 }
+
