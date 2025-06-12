@@ -22,10 +22,7 @@ export async function POST(req) {
   const userData = {
     _id: data.id,
     name: `${data.first_name} ${data.last_name}`,
-    email:
-      data.email_addresses && data.email_addresses.length > 0
-        ? data.email_addresses[0].email_address
-        : null,
+    email: data.email_addresses[0].email_address,
     image: data.image_url,
   };
 
@@ -52,4 +49,3 @@ export async function POST(req) {
   }
   return NextResponse.json({ message: "Event received" });
 }
-
