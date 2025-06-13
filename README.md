@@ -1,36 +1,42 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# DeepSeek AI Clone (Next.js)
 
-## Getting Started
+![Screenshot 2025-06-13 093127](https://github.com/user-attachments/assets/1263395b-de7f-4d94-8e5a-677354a06b56)
+![Screenshot 2025-06-13 093153](https://github.com/user-attachments/assets/eb97a8b5-c8cc-4c12-a420-5071186e0ddb)
+![Screenshot 2025-06-13 093232](https://github.com/user-attachments/assets/7b6ed3a0-05c7-45f8-ad40-6a04e876126c)
+![Screenshot 2025-06-13 093307](https://github.com/user-attachments/assets/10d91f24-be03-4c09-bdcf-d544feff1bec)
 
-First, run the development server:
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+A full-stack web application cloning the core functionalities of an AI chat interface, similar to DeepSeek.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Key Features
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+- **Real-time Chat Interactions**: Engage in dynamic conversations with the AI
+- **User Authentication**: Securely manage user sessions with Clerk
+- **Chat History**: Persisted chat conversations with the ability to:
+  - Rename chats
+  - Delete chats
+- **AI Powered Responses**: Integrates with the DeepSeek API to generate intelligent replies
+- **Modern UI**: Built with Next.js for a fast and responsive user experience
+- **Database**: Utilizes MongoDB Atlas for storing chat data
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Technologies Used
 
-## Learn More
+### Frontend:
+- Next.js
+- React
 
-To learn more about Next.js, take a look at the following resources:
+### Backend (API Routes in Next.js):
+- Node.js
+- Axios (for API calls)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Services:
+- **Authentication**: Clerk
+- **Database**: MongoDB Atlas
+- **AI Integration**: DeepSeek API
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Live Demo
 
-## Deploy on Vercel
+[Live Link ](https://deep-seek-clone-next-js.vercel.app/)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+**Important Note**:  
+The DeepSeek AI API top-up is currently expired, so you might encounter an "insufficient balance" error when trying to send messages on the live demo.
