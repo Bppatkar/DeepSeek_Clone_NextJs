@@ -7,8 +7,16 @@ import ChatLabel from "./ChatLabel";
 
 const Sidebar = ({ expand, setExpand }) => {
   const { openSignIn } = useClerk();
-  const { user, chats, createNewChat } = useAppContext();
+  // Destructure selectedChat from useAppContext
+  const { user, chats, createNewChat, setSelectedChat, selectedChat } = useAppContext();
   const [openMenu, setOpenMenu] = useState({ id: 0, open: false });
+
+  const handleChatLabelClick = (chatId) => {
+    const chatToSelect = chats.find(chat => chat._id === chatId);
+    if (chatToSelect) {
+      setSelectedChat(chatToSelect);
+    }
+  };
 
   return (
     <div
@@ -81,16 +89,23 @@ const Sidebar = ({ expand, setExpand }) => {
           }`}
         >
           <p className="my-1">Recents</p>
-          {/* chatLabel */}
-          {chats.map((chat, i) => (
-            <ChatLabel
-              key={i}
-              name={chat.name}
-              id={chat._id}
-              openMenu={openMenu}
-              setOpenMenu={setOpenMenu}
-            />
-          ))}
+          {/* Render ChatLabels only if chats array is not empty */}
+          {chats.length > 0 ? (
+            chats.map((chat, i) => (
+              <ChatLabel
+                key={chat._id || i}
+                name={chat.name}
+                id={chat._id}
+                openMenu={openMenu}
+                setOpenMenu={setOpenMenu}
+                onClick={() => handleChatLabelClick(chat._id)}
+                // Use optional chaining here to safely access _id
+                isSelected={selectedChat?._id === chat._id}
+              />
+            ))
+          ) : (
+            <p className="text-white/50 text-xs mt-2">No recent chats. Click "New Chat" to start!</p>
+          )}
         </div>
       </div>
 

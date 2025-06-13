@@ -2,7 +2,7 @@ import { assets } from "@/assets/assets";
 import { useAppContext } from "@/context/AppContext";
 import axios from "axios";
 import Image from "next/image";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react"; // Import useEffect
 import toast from "react-hot-toast";
 
 const PromptBox = ({ isLoading, setIsLoading }) => {
@@ -10,22 +10,39 @@ const PromptBox = ({ isLoading, setIsLoading }) => {
   const { chats, user, setChats, setSelectedChat, selectedChat } =
     useAppContext();
 
+  // Effect to clear prompt when selectedChat changes
+  useEffect(() => {
+    setPrompt(""); // Clear prompt when a different chat is selected
+  }, [selectedChat]); // Dependency array: run this effect whenever selectedChat changes
+
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendPrompt(e);
-     
     }
   };
+
   const sendPrompt = async (e) => {
-    const promptCopy = prompt;
+    const promptCopy = prompt; // Save prompt for potential error recovery
     try {
       e.preventDefault();
+
+      // Client-side validation checks
       if (!user) return toast.error("Login to send message");
-      if (isLoading) return toast.error("wait for the previous prompt result");
+      if (isLoading) return toast.error("Wait for the previous prompt result");
+      if (!selectedChat) {
+        toast.error("Please select or create a chat first.");
+        setIsLoading(false);
+        return;
+      }
+      if (!prompt.trim()) {
+        toast.error("Please enter a message.");
+        setIsLoading(false);
+        return;
+      }
 
       setIsLoading(true);
-      setPrompt("");
+      setPrompt(""); // Clear input field immediately after sending
 
       const userPrompt = {
         role: "user",
@@ -33,80 +50,117 @@ const PromptBox = ({ isLoading, setIsLoading }) => {
         timestamp: Date.now(),
       };
 
-      // saving the user prompts in chat arrays
+      // Add user's message to local state immediately
+      const currentSelectedChatMessages = selectedChat.message || [];
+      const updatedMessagesWithUserPrompt = [...currentSelectedChatMessages, userPrompt];
+
+      // Update the specific chat in the `chats` array
       setChats((prevChats) =>
         prevChats.map((chat) =>
           chat._id === selectedChat._id
-            ? { ...chat, message: [...chat.message, userPrompt] }
-            : { ...chat }
+            ? { ...chat, message: updatedMessagesWithUserPrompt }
+            : chat // Return chat as is if not the selected one
         )
       );
-
-      // saving user prompt in selected chat
-
+      // Update the `selectedChat` state
       setSelectedChat((prev) => ({
         ...prev,
-        message: [...prev.message, userPrompt],
+        message: updatedMessagesWithUserPrompt,
       }));
 
-      const { data } = await axios.post("/api/chat/ai", {
+      // Send prompt to API
+      const { data: apiResponse } = await axios.post("/api/chat/ai", {
         chatId: selectedChat._id,
-        prompt,
+        prompt: prompt.trim(),
       });
 
-      if (data.success) {
+      if (apiResponse.success) {
+        const aiMessageContent = apiResponse.data.content;
+        const aiMessageRole = apiResponse.data.role;
+        const aiMessageTimestamp = apiResponse.data.timestamp;
+
+        // Add an empty assistant message for streaming display
+        let assistantMessageForStreaming = {
+          role: aiMessageRole,
+          content: " ",
+          timestamp: aiMessageTimestamp,
+        };
+        const messagesWithInitialAIMessage = [...updatedMessagesWithUserPrompt, assistantMessageForStreaming];
+
+        // Update selectedChat immediately for streaming
+        setSelectedChat((prev) => {
+          if (!prev) return null; // Handle if selectedChat becomes null unexpectedly
+          return { ...prev, message: messagesWithInitialAIMessage };
+        });
+
+        // Update the specific chat in the `chats` array with the initial AI message
         setChats((prevChats) =>
           prevChats.map((chat) =>
             chat._id === selectedChat._id
-              ? { ...chat, message: [...chat.message, data.data] }
+              ? { ...chat, message: messagesWithInitialAIMessage }
               : chat
           )
         );
 
-        const message = data.data.content;
-        const messageTokens = message.split(" ");
-        let assistantMessage = {
-          role: "assistant",
-          content: " ",
-          timestamp: Date.now(),
-        };
-        setSelectedChat((prev) => ({
-          ...prev,
-          message: [...prev.message, assistantMessage],
-        }));
+
+        // Simulate typing/streaming effect for AI response
+        const messageTokens = aiMessageContent.split(" ");
+        let currentStreamedContent = "";
 
         for (let i = 0; i < messageTokens.length; i++) {
-          setTimeout(() => {
-            assistantMessage.content = messageTokens.slice(0, i + 1).join(" ");
-            setSelectedChat((prev) => {
-              const updatedMessages = [
-                ...prev.messages.slice(0, -1),
-                assistantMessage,
-              ];
-              return { ...prev, messages: updatedMessages };
-            });
-          }, i * 100);
+          await new Promise(resolve => setTimeout(resolve, i * 10)); // Delay for typing effect
+          currentStreamedContent += (i > 0 ? " " : "") + messageTokens[i];
+
+          setSelectedChat((prev) => {
+            if (!prev || !prev.message) return prev;
+            const updatedMessages = [...prev.message];
+            const lastMessageIndex = updatedMessages.length - 1;
+
+            if (lastMessageIndex >= 0 && updatedMessages[lastMessageIndex].role === aiMessageRole) {
+              updatedMessages[lastMessageIndex] = {
+                ...updatedMessages[lastMessageIndex],
+                content: currentStreamedContent,
+              };
+            }
+            return { ...prev, message: updatedMessages };
+          });
         }
+        // Ensure the full message is displayed after streaming
+        setSelectedChat((prev) => {
+            if (!prev || !prev.message) return prev;
+            const updatedMessages = [...prev.message];
+            const lastMessageIndex = updatedMessages.length - 1;
+            if (lastMessageIndex >= 0 && updatedMessages[lastMessageIndex].role === aiMessageRole) {
+                updatedMessages[lastMessageIndex] = {
+                    ...updatedMessages[lastMessageIndex],
+                    content: aiMessageContent,
+                };
+            }
+            return { ...prev, message: updatedMessages };
+        });
+
       } else {
-        toast.error(data.message);
-        setPrompt(promptCopy);
+        toast.error(apiResponse.message);
+        setPrompt(promptCopy); // Restore prompt on API error
       }
     } catch (error) {
+      console.error("Error sending prompt:", error); // Log the error for debugging
       toast.error(
         error.response?.data?.message ||
           error.message ||
           "An unexpected error occurred."
       );
-      setPrompt(promptCopy);
+      setPrompt(promptCopy); // Restore prompt on fetch error
     } finally {
       setIsLoading(false);
     }
   };
+
   return (
     <form
       onSubmit={sendPrompt}
-      className={`w-full  bg-[#404045] p-4 mt-4 rounded-3xl transition-all ${
-        selectedChat?.message.length > 0 ? "max-w-3xl" : "max-w-2xl"
+      className={`w-full bg-[#404045] p-4 mt-4 rounded-3xl transition-all ${
+        selectedChat?.message?.length > 0 ? "max-w-3xl" : "max-w-2xl"
       }`}
     >
       <textarea
@@ -133,6 +187,7 @@ const PromptBox = ({ isLoading, setIsLoading }) => {
         <div className="flex items-center gap-2">
           <Image className="w-4 cursor-pointer" src={assets.pin_icon} alt="" />
           <button
+            type="submit" // Ensure this is a submit button
             className={`${
               prompt ? "bg-primary" : "bg-[#71717a]"
             } rounded-full p-2 cursor-pointer`}
@@ -141,8 +196,8 @@ const PromptBox = ({ isLoading, setIsLoading }) => {
               className="w-3.5 aspect-square"
               src={prompt ? assets.arrow_icon : assets.arrow_icon_dull}
               alt=""
-              width="auto"
-              height="auto"
+              width={14}
+              height={14}
             />
           </button>
         </div>
@@ -152,4 +207,3 @@ const PromptBox = ({ isLoading, setIsLoading }) => {
 };
 
 export default PromptBox;
-

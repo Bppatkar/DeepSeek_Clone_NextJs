@@ -1,4 +1,4 @@
-export const maxDuration = 60;
+export const maxDuration = 60; // Max duration for the serverless function
 import connectDB from "@/config/db";
 import getChatModel from "@/models/Chat";
 import { getAuth } from "@clerk/nextjs/server";
@@ -12,50 +12,74 @@ const openai = new OpenAI({
 
 export async function POST(req) {
   try {
-    await connectDB();
+    await connectDB(); // Connect to MongoDB
     const Chat = getChatModel();
     const { userId } = getAuth(req);
     const { chatId, prompt } = await req.json();
 
     if (!userId) {
       return NextResponse.json(
-        { success: false, error: "user not authenticated" },
+        { success: false, error: "User not authenticated" },
         { status: 401 }
       );
     }
 
-    // find the chat document in the database based on userId and chatId
-    const data = await Chat.findOne({ userId, _id: chatId });
+    // Find the chat document
+    const chatDocument = await Chat.findOne({ userId, _id: chatId });
 
-    if (!data) {
+    if (!chatDocument) {
       return NextResponse.json(
         { success: false, error: "Chat not found" },
-        { status: 404 } // 404 Not Found is appropriate
+        { status: 404 }
       );
     }
-    // create a user message object
-    const userprompt = {
+
+    // Add user's message to the chat document
+    const userMessage = {
       role: "user",
-      content: prompt,
+      content: prompt.trim(),
       timestamp: Date.now(),
     };
+    chatDocument.message.push(userMessage);
 
-    data.message.push(userprompt);
+    // Prepare messages for DeepSeek API (send full history for context)
+    const messagesForDeepSeek = chatDocument.message.map(msg => ({
+      role: msg.role,
+      content: msg.content
+    }));
 
-    // call the deepseek api to get  a chat completion
+    let assistantResponse;
 
-    const completion = await openai.chat.completions.create({
-      messages: [{ role: "user", content: prompt }],
-      model: "deepseek-chat",
-      store: true,
-    });
-    const message = completion.choices[0].message;
-    message.timestamp = Date.now();
-    data.message.push(message);
-    data.save();
+    // Optional: Mock AI response for local development (set USE_MOCK_AI=true in .env.local)
+    if (process.env.NODE_ENV === 'development' && process.env.USE_MOCK_AI === 'true') {
+      console.log("Using Mock AI Response.");
+      assistantResponse = {
+        role: "assistant",
+        content: `This is a mock AI response for: "${prompt.trim()}".`,
+      };
+      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API delay
+    } else {
+      // Call DeepSeek API for chat completion
+      const completion = await openai.chat.completions.create({
+        messages: messagesForDeepSeek, // Pass complete conversation history
+        model: "deepseek-chat",
+        // 'store: true' is removed as it's not a valid parameter
+      });
+      assistantResponse = completion.choices[0].message;
+    }
 
-    return NextResponse.json({ success: true, data: message }, { status: 200 });
+    // Add AI's response to the chat document and save
+    assistantResponse.timestamp = Date.now();
+    chatDocument.message.push(assistantResponse);
+    await chatDocument.save(); // Await the save operation
+
+    return NextResponse.json({ success: true, data: assistantResponse }, { status: 200 });
+
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("API Error in /api/chat/ai:", error); // Log detailed server error
+    return NextResponse.json(
+      { success: false, message: error.message || "An internal server error occurred" },
+      { status: 500 }
+    );
   }
 }
